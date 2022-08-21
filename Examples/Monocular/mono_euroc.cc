@@ -85,13 +85,13 @@ int main(int argc, char **argv)
 
     double t_resize = 0.f;
     double t_track = 0.f;
-
+    int proccIm = 0;
     for (seq = 0; seq<num_seq; seq++)
     {
 
         // Main loop
         cv::Mat im;
-        int proccIm = 0;
+        proccIm = 0;
         for(int ni=0; ni<nImages[seq]; ni++, proccIm++)
         {
 
@@ -151,6 +151,7 @@ int main(int argc, char **argv)
 #endif
 
             double ttrack= std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count();
+            cout << "Processing time time t1-t2 = " << ttrack << endl;
 
             vTimesTrack[ni]=ttrack;
 
@@ -199,7 +200,22 @@ int main(int argc, char **argv)
         SLAM.SaveTrajectoryEuRoC("CameraTrajectory.txt");
         SLAM.SaveKeyFrameTrajectoryEuRoC("KeyFrameTrajectory.txt");
     }
-
+    sort(vTimesTrack.begin(),vTimesTrack.end());
+    float totaltime = 0;
+    for(int ni=0; ni<nImages[0]; ni++)
+    {
+        // cout <<"went under vtimes track: " << endl;
+        totaltime+=vTimesTrack[ni];
+    }
+    ofstream myFile;
+    myFile.open("Time_mono_euroc_MH04.csv");
+    for (float val : vTimesTrack){
+        myFile << val << "," << endl;
+    }
+    cout << "-------" << endl << endl;
+    cout << "median tracking time: " << vTimesTrack[nImages[0]/2] << endl;
+    cout << "mean tracking time: " << totaltime/proccIm << endl;
+  
     return 0;
 }
 
