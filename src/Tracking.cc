@@ -1938,6 +1938,9 @@ void Tracking::Track()
             // you explicitly activate the "only tracking" mode.
             if(mState==OK)
             {
+                cout << "CurrentFrame Id: " << mCurrentFrame.mnId << endl;
+                cout << "Map points in map: " << mpAtlas->MapPointsInMap() << endl; 
+                cout << "Keyframes in map: " << mpAtlas->KeyFramesInMap() << endl;
 
                 // Local Mapping might have changed some MapPoints tracked in last frame
                 CheckReplacedInLastFrame();
@@ -2784,6 +2787,7 @@ void Tracking::UpdateLastFrame()
     KeyFrame* pRef = mLastFrame.mpReferenceKF;
     Sophus::SE3f Tlr = mlRelativeFramePoses.back();
     mLastFrame.SetPose(Tlr * pRef->GetPose());
+    cout << "Last Frame Id: " << mLastFrame.mnId << endl;
 
     if(mnLastKeyFrameId==mLastFrame.mnId || mSensor==System::MONOCULAR || mSensor==System::IMU_MONOCULAR || !mbOnlyTracking)
         return;
