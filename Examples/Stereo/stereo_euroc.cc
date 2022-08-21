@@ -91,6 +91,7 @@ int main(int argc, char **argv)
     ORB_SLAM3::System SLAM(argv[1],argv[2],ORB_SLAM3::System::STEREO, true);
 
     cv::Mat imLeft, imRight;
+    int proccIm = 0;
     for (seq = 0; seq<num_seq; seq++)
     {
 
@@ -99,7 +100,7 @@ int main(int argc, char **argv)
         double t_rect = 0;
         double t_track = 0;
         int num_rect = 0;
-        int proccIm = 0;
+        proccIm = 0;
         for(int ni=0; ni<nImages[seq]; ni++, proccIm++)
         {
             // Read left and right images from file
@@ -181,6 +182,22 @@ int main(int argc, char **argv)
         SLAM.SaveTrajectoryEuRoC("CameraTrajectory.txt");
         SLAM.SaveKeyFrameTrajectoryEuRoC("KeyFrameTrajectory.txt");
     }
+    sort(vTimesTrack.begin(),vTimesTrack.end());
+    float totaltime = 0;
+    for(int ni=0; ni<nImages[0]; ni++)
+    {
+        // cout <<"went under vtimes track: " << endl;
+        totaltime+=vTimesTrack[ni];
+    }
+    ofstream myFile;
+    myFile.open("Time_stereo_euroc_MH04.csv");
+    for (float val : vTimesTrack){
+        myFile << val << "," << endl;
+    }
+    cout << "-------" << endl << endl;
+    cout << "median tracking time: " << vTimesTrack[nImages[0]/2] << endl;
+    cout << "mean tracking time: " << totaltime/proccIm << endl;
+
 
     return 0;
 }
