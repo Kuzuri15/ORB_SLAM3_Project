@@ -37,16 +37,15 @@ Stereo.T_c1_c2: !!opencv-matrix
   dt: f
   data: [ 0.999999445773493,   0.000791687752817,   0.000694034010224,   0.101063427414194,
             -0.000823363992158,   0.998899461915674,   0.046895490788700,   0.001946204678584,
-            -0.000656143613644,  -0.046896036240590,   0.998899560146304,   0.001015350132563,
-            0.0,0.0,0.0,1.0]
+            -0.000656143613644,  -0.046896036240590,   0.998899560146304,   0.001015350132563, 0.0,0.0,0.0,1.0]
 
 # Camera resolution
 Camera.width: 512
 Camera.height: 512
 
 # Lapping area between images
-Camera.overlappingBegin: 0
-Camera.overlappingEnd: 511
+Camera1.overlappingBegin: 0
+Camera1.overlappingEnd: 511
 
 Camera2.overlappingBegin: 0
 Camera2.overlappingEnd: 511
@@ -59,6 +58,23 @@ Camera.RGB: 1
 
 # Close/Far threshold. Baseline times.
 Stereo.ThDepth: 40.0
+
+# Transformation from body-frame (imu) to left camera
+# Tbc: !!opencv-matrix
+#    rows: 4
+#    cols: 4
+#    dt: f
+#    data: [-0.9995250378696743, 0.0075019185074052044, -0.02989013031643309, 0.045574835649698026, 
+#           0.029615343885863205, -0.03439736061393144, -0.998969345370175, -0.071161801837997044,
+#          -0.008522328211654736, -0.9993800792498829, 0.03415885127385616, -0.044681254117144367,
+#           0.0, 0.0, 0.0, 1.0]
+
+# # IMU noise (Use those from VINS-mono)
+# IMU.NoiseGyro: 0.00016 # 0.004 (VINS) # 0.00016 (TUM) # 0.00016    # rad/s^0.5 
+# IMU.NoiseAcc: 0.0028 # 0.04 (VINS) # 0.0028 (TUM) # 0.0028     # m/s^1.5
+# IMU.GyroWalk: 0.000022 # 0.000022 (VINS and TUM) rad/s^1.5
+# IMU.AccWalk: 0.00086 # 0.0004 (VINS) # 0.00086 # 0.00086    # m/s^2.5
+# IMU.Frequency: 200
 
 #--------------------------------------------------------------------------------------------
 # ORB Parameters
