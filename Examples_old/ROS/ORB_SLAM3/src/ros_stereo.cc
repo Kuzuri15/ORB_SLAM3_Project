@@ -40,7 +40,10 @@ public:
     ImageGrabber(ORB_SLAM3::System* pSLAM):mpSLAM(pSLAM){}
 
     void GrabStereo(const sensor_msgs::ImageConstPtr& msgLeft,const sensor_msgs::ImageConstPtr& msgRight);
-
+	
+    queue<sensor_msgs::ImageConstPtr> imgLeftBuf, imgRightBuf;
+    std::mutex mBufMutexLeft,mBufMutexRight;
+	
     ORB_SLAM3::System* mpSLAM;
     bool do_rectify;
     cv::Mat M1l,M2l,M1r,M2r;
@@ -130,39 +133,49 @@ int main(int argc, char **argv)
 
 void ImageGrabber::GrabStereo(const sensor_msgs::ImageConstPtr& msgLeft,const sensor_msgs::ImageConstPtr& msgRight)
 {
-    // Copy the ros image message to cv::Mat.
-    cv_bridge::CvImageConstPtr cv_ptrLeft;
-    try
-    {
-        cv_ptrLeft = cv_bridge::toCvShare(msgLeft);
-    }
-    catch (cv_bridge::Exception& e)
-    {
-        ROS_ERROR("cv_bridge exception: %s", e.what());
-        return;
-    }
+    float r_n = (float) rand()/RAND_MAX;
+    cout << "Random no is: " << r_n << endl;
+    if(r_n>0.5){
+        cout << "Image pushed" << endl;
+        cout << "Left buffer length is: " << imgLeftBuf.size() << endl;
+        cout << "Right buffer length is: " << imgRightBuf.size() << endl;
+        imgLeftBuf.push(msgLeft);
+        imgRightBuf.push(msgRight);
+        // Copy the ros image message to cv::Mat.
+        cv_bridge::CvImageConstPtr cv_ptrLeft;
+        try
+        {
+            cv_ptrLeft = cv_bridge::toCvShare(msgLeft);
+        }
+        catch (cv_bridge::Exception& e)
+        {
+            ROS_ERROR("cv_bridge exception: %s", e.what());
+            return;
+        }
 
-    cv_bridge::CvImageConstPtr cv_ptrRight;
-    try
-    {
-        cv_ptrRight = cv_bridge::toCvShare(msgRight);
-    }
-    catch (cv_bridge::Exception& e)
-    {
-        ROS_ERROR("cv_bridge exception: %s", e.what());
-        return;
-    }
+        cv_bridge::CvImageConstPtr cv_ptrRight;
+        try
+        {
+            cv_ptrRight = cv_bridge::toCvShare(msgRight);
+        }
+        catch (cv_bridge::Exception& e)
+        {
+            ROS_ERROR("cv_bridge exception: %s", e.what());
+            return;
+        }
 
-    if(do_rectify)
-    {
-        cv::Mat imLeft, imRight;
-        cv::remap(cv_ptrLeft->image,imLeft,M1l,M2l,cv::INTER_LINEAR);
-        cv::remap(cv_ptrRight->image,imRight,M1r,M2r,cv::INTER_LINEAR);
-        mpSLAM->TrackStereo(imLeft,imRight,cv_ptrLeft->header.stamp.toSec());
-    }
-    else
-    {
-        mpSLAM->TrackStereo(cv_ptrLeft->image,cv_ptrRight->image,cv_ptrLeft->header.stamp.toSec());
+        if(do_rectify)
+        {
+            cv::Mat imLeft, imRight;
+            cv::remap(cv_ptrLeft->image,imLeft,M1l,M2l,cv::INTER_LINEAR);
+            cv::remap(cv_ptrRight->image,imRight,M1r,M2r,cv::INTER_LINEAR);
+            mpSLAM->TrackStereo(imLeft,imRight,cv_ptrLeft->header.stamp.toSec());
+        }
+        else
+        {
+            mpSLAM->TrackStereo(cv_ptrLeft->image,cv_ptrRight->image,cv_ptrLeft->header.stamp.toSec());
+        }
+
     }
 
 }
