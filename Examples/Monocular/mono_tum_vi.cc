@@ -218,6 +218,11 @@ int main(int argc, char **argv)
     {
         totaltime+=vTimesTrack[ni];
     }
+    ofstream myFile;
+    myFile.open("Time_mono_Tum_rooom4.csv");
+    for (float val : vTimesTrack){
+        myFile << val << "," << endl;
+    }
     cout << "-------" << endl << endl;
     cout << "median tracking time: " << vTimesTrack[nImages[0]/2] << endl;
     cout << "mean tracking time: " << totaltime/proccIm << endl;
