@@ -39,7 +39,7 @@ using namespace std;
 
 namespace ORB_SLAM3
 {
-
+bool track_flag = false;
 
 Tracking::Tracking(System *pSys, ORBVocabulary* pVoc, FrameDrawer *pFrameDrawer, MapDrawer *pMapDrawer, Atlas *pAtlas, KeyFrameDatabase* pKFDB, const string &strSettingPath, const int sensor, Settings* settings, const string &_nameSeq):
     mState(NO_IMAGES_YET), mSensor(sensor), mTrackedFr(0), mbStep(false),
@@ -2131,7 +2131,10 @@ void Tracking::Track()
 
             }
             if(!bOK)
+            {
                 cout << "Fail to track local map!" << endl;
+                track_flag = true;
+            }
         }
         else
         {
@@ -3775,6 +3778,7 @@ bool Tracking::Relocalization()
     {
         mnLastRelocFrameId = mCurrentFrame.mnId;
         cout << "Relocalized!!" << endl;
+		track_flag = false;
         return true;
     }
 
@@ -3839,6 +3843,7 @@ void Tracking::Reset(bool bLocMap)
         mpViewer->Release();
 
     Verbose::PrintMess("   End reseting! ", Verbose::VERBOSITY_NORMAL);
+	track_flag = false;
 }
 
 void Tracking::ResetActiveMap(bool bLocMap)
@@ -3930,6 +3935,7 @@ void Tracking::ResetActiveMap(bool bLocMap)
         mpViewer->Release();
 
     Verbose::PrintMess("   End reseting! ", Verbose::VERBOSITY_NORMAL);
+	track_flag = false;
 }
 
 vector<MapPoint*> Tracking::GetLocalMapMPS()
