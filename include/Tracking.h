@@ -53,9 +53,10 @@ class LoopClosing;
 class System;
 class Settings;
 
+extern bool track_flag;	
 class Tracking
 {  
-
+	
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     Tracking(System* pSys, ORBVocabulary* pVoc, FrameDrawer* pFrameDrawer, MapDrawer* pMapDrawer, Atlas* pAtlas,
