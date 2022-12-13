@@ -22,14 +22,18 @@
 #include<fstream>
 #include<chrono>
 
+#include<std_msgs/Int32.h>
+#include<std_msgs/Bool.h>
 #include<ros/ros.h>
 #include <cv_bridge/cv_bridge.h>
 
 #include<opencv2/core/core.hpp>
-
+#include<Tracking.h>
 #include"../../../include/System.h"
 
 using namespace std;
+ros::Publisher t_pub;
+std_msgs::Bool t_msg;
 
 class ImageGrabber
 {
@@ -37,8 +41,6 @@ public:
     ImageGrabber(ORB_SLAM3::System* pSLAM):mpSLAM(pSLAM){}
 
     void GrabImage(const sensor_msgs::ImageConstPtr& msg);
-    queue<sensor_msgs::ImageConstPtr> img0Buf;
-    std::mutex mBufMutex;
 
     ORB_SLAM3::System* mpSLAM;
 };
@@ -61,6 +63,7 @@ int main(int argc, char **argv)
     ImageGrabber igb(&SLAM);
 
     ros::NodeHandle nodeHandler;
+    t_pub = nodeHandler.advertise<std_msgs::Bool>("/track_loss", 1);
     ros::Subscriber sub = nodeHandler.subscribe("/camera/image_raw", 1, &ImageGrabber::GrabImage,&igb);
 
     ros::spin();
@@ -78,26 +81,25 @@ int main(int argc, char **argv)
 
 void ImageGrabber::GrabImage(const sensor_msgs::ImageConstPtr& msg)
 {
-    float r_n = (float) rand()/RAND_MAX;
-    cout << "Random no is: " << r_n << endl;
-    if(r_n>0.5){
-        cout << "image pushed" << endl;
-        cout << "buffer length is: " << img0Buf.size() << endl;
-        img0Buf.push(msg);
-        // Copy the ros image message to cv::Mat.
-        cv_bridge::CvImageConstPtr cv_ptr;
-        try
-        {
-            cv_ptr = cv_bridge::toCvShare(msg);
-        }
-        catch (cv_bridge::Exception& e)
-        {
-            ROS_ERROR("cv_bridge exception: %s", e.what());
-            return;
-        }
+	t_msg.data = ORB_SLAM3::track_flag;
+	ROS_INFO("Flag before publishing: %s", t_msg.data ? "true" : "false");
+	ros::Rate rate(2);
+	t_pub.publish(t_msg);
+	ros::Duration(0.05).sleep();
+	
+    // Copy the ros image message to cv::Mat.
+	cv_bridge::CvImageConstPtr cv_ptr;
+	try
+	{
+		cv_ptr = cv_bridge::toCvShare(msg);
+	}
+	catch (cv_bridge::Exception& e)
+	{
+		ROS_ERROR("cv_bridge exception: %s", e.what());
+		return;
+	}
 
-        mpSLAM->TrackMonocular(cv_ptr->image,cv_ptr->header.stamp.toSec());
-    }
+	mpSLAM->TrackMonocular(cv_ptr->image,cv_ptr->header.stamp.toSec());
 }
 
 
