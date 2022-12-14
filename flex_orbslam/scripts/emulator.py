@@ -7,7 +7,7 @@ from sensor_msgs.msg import Image
 
 current_frame = 0
 published_messages = 0
-count = 0
+
 
 image_list = []
 bag = rosbag.Bag('/home/vivekw964/vivek_ws/src/flex_orbslam/scripts/MH_01_easy.bag')
@@ -17,12 +17,10 @@ for topic, msg, t in bag.read_messages(topics =['/cam0/image_raw', '/imu', '/pos
 def velcallback(data_vel):
 
     print ('Received velocity', data_vel.data)
-    global processing, new_velocity, velocity, count
+    global velocity, count
     pub = rospy.Publisher('/camera/images', Image, queue_size = 1)
     global image_list, current_frame, published_messages
     rate = rospy.Rate(2)
-    # count = 0
-    next_frame = 0
 
     velocity = data_vel.data
  
@@ -34,7 +32,6 @@ def velcallback(data_vel):
         print('Published messages till now: ', published_messages)
         current_frame += 1
         current_frame = current_frame + velocity
-        # count += 1
         rospy.sleep(0.1) #should be 0.05 as waiting time = 1/20fps
         break
 
