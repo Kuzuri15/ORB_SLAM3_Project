@@ -1,0 +1,4 @@
+<launch>
+<node name="emulator" pkg="flex_orbslam" type="emulator.py" output="screen"></node>
+<node name="buffer" pkg="flex_orbslam" type="buffer.py" output="screen"></node>
+</launch>
