@@ -12,7 +12,7 @@ img_pub = rospy.Publisher('/camera/image_raw', Image, queue_size = 1)
 
 def imagecallback(img):
     # print("i am inside img callback\n")
-    global img_msg, img_pub
+    global img_pub
     img_msg = img
     rate = rospy.Rate(2)
     img_pub.publish(img_msg)
@@ -21,7 +21,7 @@ def imagecallback(img):
 
 
 def tlosscallback(flag):
-    global t_flag, vel_pub
+    global vel_pub
     t_flag = flag.data
     rate = rospy.Rate(2)
     print("flag value in buffer:", t_flag)
