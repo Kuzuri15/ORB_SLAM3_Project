@@ -2016,7 +2016,7 @@ void Tracking::Track()
                 }
                 else if (mState == LOST)
                 {
-
+					track_flag = true;
                     Verbose::PrintMess("A new map is started...", Verbose::VERBOSITY_NORMAL);
 
                     if (pCurrentMap->KeyFramesInMap()<10)
@@ -2030,6 +2030,7 @@ void Tracking::Track()
                         mpLastKeyFrame = static_cast<KeyFrame*>(NULL);
 
                     Verbose::PrintMess("done", Verbose::VERBOSITY_NORMAL);
+					track_flag = false;
 
                     return;
                 }
@@ -2275,7 +2276,8 @@ void Tracking::Track()
 
         // Reset if the camera get lost soon after initialization
         if(mState==LOST)
-        {
+        {	
+			track_flag = true;
             if(pCurrentMap->KeyFramesInMap()<=10)
             {
                 mpSystem->ResetActiveMap();
@@ -2290,7 +2292,7 @@ void Tracking::Track()
                 }
 
             CreateMapInAtlas();
-
+			track_flag = false;
             return;
         }
 
@@ -3785,7 +3787,8 @@ bool Tracking::Relocalization()
 }
 
 void Tracking::Reset(bool bLocMap)
-{
+{	
+	track_flag = true;
     Verbose::PrintMess("System Reseting", Verbose::VERBOSITY_NORMAL);
 
     if(mpViewer)
@@ -3847,7 +3850,8 @@ void Tracking::Reset(bool bLocMap)
 }
 
 void Tracking::ResetActiveMap(bool bLocMap)
-{
+{	
+	track_flag = true;
     Verbose::PrintMess("Active map Reseting", Verbose::VERBOSITY_NORMAL);
     if(mpViewer)
     {
