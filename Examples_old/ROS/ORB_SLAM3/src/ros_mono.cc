@@ -50,7 +50,7 @@ public:
 
 int main(int argc, char **argv)
 {		
-		time_track.resize(5000);
+	time_track.resize(5000);
     ofstream myFile;
     myFile.open("Time_Process_ROS.csv");
     ros::init(argc, argv, "Mono");
@@ -78,7 +78,7 @@ int main(int argc, char **argv)
     SLAM.Shutdown();
 	
 		//Save Processing time
-		for (float val : time_track){
+	for (float val : time_track){
         myFile << val << "," << endl;
     }
 
@@ -117,11 +117,11 @@ void ImageGrabber::GrabImage(const sensor_msgs::ImageConstPtr& msg)
 
 	mpSLAM->TrackMonocular(cv_ptr->image,cv_ptr->header.stamp.toSec());
 	auto end_time = std::chrono::steady_clock::now();
-  double process_time = std::chrono::duration_cast<std::chrono::duration<double> >(end_time - start_time).count();
+  	double process_time = std::chrono::duration_cast<std::chrono::duration<double> >(end_time - start_time).count();
 	std::cout << "Processing time per frame: " << process_time << "s\n";
-  time_track[val_count]= process_time;
+  	time_track[val_count]= process_time;
 	val_count++;
-  cout << "Frames used to relocalize after tracking loss: " << loss_count << endl;
+  	cout << "Frames used to relocalize after tracking loss: " << loss_count << endl;
 	
 }
 
