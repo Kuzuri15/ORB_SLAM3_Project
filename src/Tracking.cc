@@ -39,7 +39,7 @@ using namespace std;
 
 namespace ORB_SLAM3
 {
-bool track_flag = false;
+int matches_metric = 0;
 
 Tracking::Tracking(System *pSys, ORBVocabulary* pVoc, FrameDrawer *pFrameDrawer, MapDrawer *pMapDrawer, Atlas *pAtlas, KeyFrameDatabase* pKFDB, const string &strSettingPath, const int sensor, Settings* settings, const string &_nameSeq):
     mState(NO_IMAGES_YET), mSensor(sensor), mTrackedFr(0), mbStep(false),
@@ -2016,7 +2016,6 @@ void Tracking::Track()
                 }
                 else if (mState == LOST)
                 {
-					track_flag = true;
                     Verbose::PrintMess("A new map is started...", Verbose::VERBOSITY_NORMAL);
 
                     if (pCurrentMap->KeyFramesInMap()<10)
@@ -2030,8 +2029,6 @@ void Tracking::Track()
                         mpLastKeyFrame = static_cast<KeyFrame*>(NULL);
 
                     Verbose::PrintMess("done", Verbose::VERBOSITY_NORMAL);
-					track_flag = false;
-
                     return;
                 }
             }
@@ -2134,7 +2131,6 @@ void Tracking::Track()
             if(!bOK)
             {
                 cout << "Fail to track local map!" << endl;
-                track_flag = true;
             }
         }
         else
@@ -2277,7 +2273,6 @@ void Tracking::Track()
         // Reset if the camera get lost soon after initialization
         if(mState==LOST)
         {	
-			track_flag = true;
             if(pCurrentMap->KeyFramesInMap()<=10)
             {
                 mpSystem->ResetActiveMap();
@@ -2292,7 +2287,6 @@ void Tracking::Track()
                 }
 
             CreateMapInAtlas();
-			track_flag = false;
             return;
         }
 
@@ -3024,9 +3018,11 @@ bool Tracking::TrackLocalMap()
                 {
                     if(mCurrentFrame.mvpMapPoints[i]->Observations()>0)
                         mnMatchesInliers++;
+						matches_metric = mnMatchesInliers;
                 }
                 else
                     mnMatchesInliers++;
+					matches_metric = mnMatchesInliers;
             }
             else if(mSensor==System::STEREO)
                 mCurrentFrame.mvpMapPoints[i] = static_cast<MapPoint*>(NULL);
@@ -3780,7 +3776,6 @@ bool Tracking::Relocalization()
     {
         mnLastRelocFrameId = mCurrentFrame.mnId;
         cout << "Relocalized!!" << endl;
-		track_flag = false;
         return true;
     }
 
@@ -3788,7 +3783,6 @@ bool Tracking::Relocalization()
 
 void Tracking::Reset(bool bLocMap)
 {	
-	track_flag = true;
     Verbose::PrintMess("System Reseting", Verbose::VERBOSITY_NORMAL);
 
     if(mpViewer)
@@ -3846,12 +3840,10 @@ void Tracking::Reset(bool bLocMap)
         mpViewer->Release();
 
     Verbose::PrintMess("   End reseting! ", Verbose::VERBOSITY_NORMAL);
-	track_flag = false;
 }
 
 void Tracking::ResetActiveMap(bool bLocMap)
 {	
-	track_flag = true;
     Verbose::PrintMess("Active map Reseting", Verbose::VERBOSITY_NORMAL);
     if(mpViewer)
     {
@@ -3939,7 +3931,6 @@ void Tracking::ResetActiveMap(bool bLocMap)
         mpViewer->Release();
 
     Verbose::PrintMess("   End reseting! ", Verbose::VERBOSITY_NORMAL);
-	track_flag = false;
 }
 
 vector<MapPoint*> Tracking::GetLocalMapMPS()
