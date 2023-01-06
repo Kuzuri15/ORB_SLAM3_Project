@@ -3018,11 +3018,11 @@ bool Tracking::TrackLocalMap()
                 {
                     if(mCurrentFrame.mvpMapPoints[i]->Observations()>0)
                         mnMatchesInliers++;
-						matches_metric = mnMatchesInliers;
+			matches_metric = mnMatchesInliers;
                 }
                 else
                     mnMatchesInliers++;
-					matches_metric = mnMatchesInliers;
+		    matches_metric = mnMatchesInliers;
             }
             else if(mSensor==System::STEREO)
                 mCurrentFrame.mvpMapPoints[i] = static_cast<MapPoint*>(NULL);
