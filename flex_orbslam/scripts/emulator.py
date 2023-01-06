@@ -3,15 +3,13 @@ import rospy
 import rosbag
 from std_msgs.msg import String, Int32, Float32, Bool
 from sensor_msgs.msg import Image
-from buffer import MAX_VELOCITY, LEAST_VELOCITY
 
 current_frame = 0
 frames_skipped = 0
 published_messages = 0
 prev_img = None
 IMG_PUB = rospy.Publisher('/camera/images', Image, queue_size=1)
-# IMG_PUB_RATE = rospy.Duration(0.8) # 10 Hz
-IMG_PUB_RATE = rospy.Duration(0.5) # 10 Hz
+IMG_PUB_RATE = rospy.Duration(0.7)
 img_pub_timer = None
 
 SHUTDOWN_PUB = rospy.Publisher('/shutdown', Bool, queue_size=1)
@@ -52,7 +50,6 @@ def publish_image(event=None):
     #boundary condition to be checked before publishing the image
     if current_frame + frames_skipped < IMAGES_SIZE:
         image = prev_img
-        #updating current frame ID by adding number of skipped frames as per velocity
         current_frame = current_frame + frames_skipped
         frames_skipped = 0
         # moving bag position to current frame ID for publishing
