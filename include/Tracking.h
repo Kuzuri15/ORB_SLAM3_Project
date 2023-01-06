@@ -53,7 +53,7 @@ class LoopClosing;
 class System;
 class Settings;
 
-extern bool track_flag;	
+extern int matches_metric;
 class Tracking
 {  
 	
