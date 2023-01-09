@@ -6,7 +6,7 @@ import csv
 from std_msgs.msg import String, Float32, Int32, Bool
 from sensor_msgs.msg import Image
 
-BUFFER_SIZE = 200
+BUFFER_SIZE = 400
 BUFFER_IMAGES = []
 buffer_pointer = 0
 
@@ -16,11 +16,11 @@ track_flag = True
 last_frame = 0
 next_frame = 0
 
-DEFAULT_VEL = 3.0
-BACKOFF_COEFF = 0.5     #temp value, experiment then change
-SPEEDUP_COEFF = 1.3     #temp value, experiment then change
-SPEEDDOWN_COEFF = 0.9   #temp value, experiment then change
-SLOWING_COEFF = 2 * 0.005
+DEFAULT_VEL = 4.0
+BACKOFF_COEFF = 0.5     
+SPEEDUP_COEFF = 1.1
+SPEEDDOWN_COEFF = 0.9   
+SLOWING_COEFF = 2 * (DEFAULT_VEL/BUFFER_SIZE) #0.02
 
 step = 1
 MAX_STEP = 5  #to avoid information loss which will lead to tracking loss
@@ -37,34 +37,38 @@ same_image = False #when flag is true, need to go back in time to help the algor
 #publishers initiated for velocity and image
 VEL_PUB = rospy.Publisher("robot_velocity", Float32, queue_size=1)
 IMG_PUB = rospy.Publisher('/camera/image_raw', Image, queue_size = 1)
-VEL_PUB_RATE = rospy.Duration(0.6) # 10 Hz
-IMG_PUB_RATE = rospy.Duration(0.8) # 10 Hz
+VEL_PUB_RATE = rospy.Duration(0.3) # 10 Hz
+IMG_PUB_RATE = rospy.Duration(0.3) # 10 Hz
 
 TRACK_LOST_THRESHOLD = 5 #maximum continuous track loss after which we need to set velocity = 0 
 track_lost = 0
 
 velocity = 0.0
 velocity_history = []
+metric_history = []
+stepsize_history = []
+
 
 def imageCallback(img):
-    global prev_pub_img, BUFFER_IMAGES, same_img, BUFFER_SIZE, buffer_pointer
+    global prev_pub_img, BUFFER_IMAGES, same_image, BUFFER_SIZE, buffer_pointer
     start_time = time.time()
 
     #if same image received from emulator as the previous image published to ORBslam then we can say
     #that velocity is 0 and need to go back in time
     if prev_pub_img and prev_pub_img.data != img.data or not prev_pub_img:
-        same_img = False
+        same_image = False
     else:
-        same_img = True
+        same_image = True
+        print("Same image?",  same_image)
 
     #if velocity not 0 that means different image received and it can be appended to the buffer
-    if not same_img:
+    if not same_image:
         if BUFFER_IMAGES and len(BUFFER_IMAGES) >= BUFFER_SIZE:
             BUFFER_IMAGES.pop(0)
             buffer_pointer -= 1
         BUFFER_IMAGES.append(img)
 
-    print("Images in buffer: ", len(BUFFER_IMAGES))
+    # print("Images in buffer: ", len(BUFFER_IMAGES))
     # print 'Processing time per loop:', time.time() - start_time
 
 
@@ -73,15 +77,17 @@ def trackMetricCallback(callback_val):
     global track_lost, velocity, MAX_VELOCITY, LEAST_VELOCITY, step, tracking_metric, GBIT, TRACK_LOST_THRESHOLD
     tracking_metric = callback_val.data
     print("Metric value: ", tracking_metric)
+    metric_history.append(tracking_metric)
 
     #after continuous track loss of more than 5 published frames, we go back in time to relocalize
-    if tracking_metric <= 30:
+    if same_image and tracking_metric <= 30:
         track_lost+=1
+        print("track_lost", track_lost)
         if track_lost >= TRACK_LOST_THRESHOLD: #boundary condition check
             track_lost = 0
             GBIT = True
     else:
-        track_lost-=1
+        # track_lost-=1
         GBIT = False
 
 def calculateStep(tracking_metric, prev_step):
@@ -103,13 +109,14 @@ def publish_image(event=None):
 
     #before publishing, check if buffer is empty or not
     if BUFFER_IMAGES:
-        print("Publishing image")
+        # print("Publishing image")
         #when tracking is good, flushing the buffer but keeping atleast 20 frames in buffer if
         #required to go back in time/buffer
-        if tracking_metric >= 50 and last_frame>20:
-            print("Buffer pointer n last frame: ", buffer_pointer, last_frame)
+        if tracking_metric >= 50 and last_frame>170:
+            # print("Buffer pointer n last frame: ", buffer_pointer, last_frame)
             del BUFFER_IMAGES[:last_frame-20]
-            buffer_pointer -= (last_frame-20)
+            print("--------------------", len(BUFFER_IMAGES))
+            buffer_pointer -= (last_frame-20) 
 
         elif GBIT:  #when we go back in time, buffer pointer should go back by 30% (back traversal)
             print("-------------going back: ")
@@ -117,16 +124,18 @@ def publish_image(event=None):
             step = 1  #resetting the step
         
         last_frame = buffer_pointer
-        print("last frame at start: ", last_frame)
+        # print("last frame at start: ", last_frame)
         if not track_flag:
             next_step = calculateStep(tracking_metric, step)
-            last_frame = min(BUFFER_SIZE-1, last_frame + int(round(next_step)))
+            last_frame = min(len(BUFFER_IMAGES)-1, last_frame + int(round(next_step)))  #BUFFer_SIZE -> BUFFER_IMAGES length
         else:
             next_step = 1
             track_flag = False
-
+        # print("Updated last frame: ", last_frame)
         step = next_step
+        stepsize_history.append(step)
         print("Step size: ", step)
+
 
         if buffer_pointer >= len(BUFFER_IMAGES): #boundary condition
             buffer_pointer = len(BUFFER_IMAGES) - 1
@@ -141,8 +150,9 @@ def publish_image(event=None):
         prev_tracking_metric = tracking_metric
         
         published_images += 1
-        print("Images published from buffer: ", last_frame)
-        buffer_pointer = last_frame + 1
+        print("Images in buffer: ", len(BUFFER_IMAGES))
+        print("Frame published from buffer: ", last_frame)
+        buffer_pointer = last_frame + 1 #as last frame has been published, buffer pointer should come on next frame
 
         #when buffer pointer reaches end of the buffer and velocity is non zero, we keep on publishing the last image
         if buffer_pointer >= len(BUFFER_IMAGES) and not same_image:
@@ -153,13 +163,16 @@ def publish_image(event=None):
             buffer_pointer = 0
 
      
-
+def calculateVelocity(SLOWING_COEFF, BUFFER_SIZE, DEFAULT_VEL):
+    global velocity
+    # print("slowing coeff:", SLOWING_COEFF)
+    #updating the velocity as per the state of buffer
+    velocity = max(0, (DEFAULT_VEL - SLOWING_COEFF*len(BUFFER_IMAGES)))
+    return velocity
 
 def publish_velocity(event=None):
     global VEL_PUB, velocity, BUFFER_IMAGES, DEFAULT_VEL, BUFFER_SIZE, SLOWING_COEFF, velocity_history
-    print("slowing coeff:", SLOWING_COEFF)
-    #updating the velocity as per the continuous track lost and state of buffer
-    velocity = max(0, (DEFAULT_VEL - SLOWING_COEFF*len(BUFFER_IMAGES)))
+    velocity = calculateVelocity(SLOWING_COEFF, BUFFER_SIZE, DEFAULT_VEL)
     print("Velocity sent: ", velocity)
     velocity_history.append(velocity)
     VEL_PUB.publish(velocity)
@@ -169,6 +182,22 @@ def shutdownCallback(callback_val):
     if callback_val:
         rospy.signal_shutdown("Stopping Publishing")
 
+
+#create CSV files to store values of tracking metric, velocity and step size
+def save_values():
+    global metric_history, velocity_history, stepsize_history
+    with open('velocity_values.csv', 'wb') as myfile:
+        write = csv.writer(myfile)
+        for w in velocity_history:
+            write.writerow([w])
+    with open('metric_values.csv', 'wb') as myfile:
+        write = csv.writer(myfile)
+        for w in metric_history:
+            write.writerow([w])
+    with open('stepsize_values.csv', 'wb') as myfile:
+        write = csv.writer(myfile)
+        for w in stepsize_history:
+            write.writerow([w])
 
 def main_func():
     print("Starting...")
@@ -183,12 +212,7 @@ def main_func():
     # Publishing velocity to emulator
     vel_pub_timer = rospy.Timer(VEL_PUB_RATE, publish_velocity)
     rospy.spin()
-
-    with open('velocity_values_MH04.csv', 'wb') as myfile:
-        write = csv.writer(myfile)
-        for w in velocity_history:
-            write.writerow([w])
-
+    save_values()
 
 
 if __name__ == '__main__':
