@@ -21,9 +21,7 @@
 #include<algorithm>
 #include<fstream>
 #include<chrono>
-
-#include<std_msgs/Int32.h>
-#include<std_msgs/Bool.h>
+#include <std_msgs/Int32.h>
 #include<ros/ros.h>
 #include <cv_bridge/cv_bridge.h>
 
@@ -32,30 +30,31 @@
 #include"../../../include/System.h"
 
 using namespace std;
-ros::Publisher t_pub;
-std_msgs::Bool t_msg;
-vector<float> time_track;
+ros::Publisher metric_pub;     //initialized publisher to publish metric value
+std_msgs::Int32 track_metric;  //to store metric value which is published to Buffer node from here
+vector<float> time_track;      //keeps track of processing time for each frame
 int val_count = 0;
-int loss_count = 0;
+
 
 class ImageGrabber
 {
 public:
     ImageGrabber(ORB_SLAM3::System* pSLAM):mpSLAM(pSLAM){}
-
     void GrabImage(const sensor_msgs::ImageConstPtr& msg);
 
     ORB_SLAM3::System* mpSLAM;
 };
 
 int main(int argc, char **argv)
-{		
-    time_track.resize(5000);
+{   
+    time_track.resize(5000); //setting vector size
     ofstream myFile;
-    myFile.open("Time_Process_ROS.csv");
+    myFile.open("Time_Process_ROS.csv"); //creating file to save time statistics
+
     ros::init(argc, argv, "Mono");
     ros::start();
-
+    ros::Rate rate(10);
+    
     if(argc != 3)
     {
         cerr << endl << "Usage: rosrun ORB_SLAM3 Mono path_to_vocabulary path_to_settings" << endl;        
@@ -67,18 +66,20 @@ int main(int argc, char **argv)
     ORB_SLAM3::System SLAM(argv[1],argv[2],ORB_SLAM3::System::MONOCULAR,true);
 
     ImageGrabber igb(&SLAM);
-
+    
     ros::NodeHandle nodeHandler;
-    t_pub = nodeHandler.advertise<std_msgs::Bool>("/track_loss", 1);
-    ros::Subscriber sub = nodeHandler.subscribe("/camera/image_raw", 1, &ImageGrabber::GrabImage,&igb);
+
+    //created publisher to publish metric value to buffer node on topic /tracking_metric
+    metric_pub = nodeHandler.advertise<std_msgs::Int32>("/tracking_metric", 1);
+    ros::Subscriber sub = nodeHandler.subscribe("/camera/image_raw", 1, &ImageGrabber::GrabImage,&igb); 
 
     ros::spin();
 
     // Stop all threads
     SLAM.Shutdown();
-	
-		//Save Processing time
-	for (float val : time_track){
+
+    //adding processing time per frame to the file
+    for (float val : time_track){
         myFile << val << "," << endl;
     }
 
@@ -91,38 +92,36 @@ int main(int argc, char **argv)
 }
 
 void ImageGrabber::GrabImage(const sensor_msgs::ImageConstPtr& msg)
-{	
-	auto start_time = std::chrono::steady_clock::now();
-	t_msg.data = ORB_SLAM3::track_flag;
-	ROS_INFO("Flag before publishing: %s", t_msg.data ? "true" : "false");
-	if (t_msg.data == true){
-        loss_count++;
+{   
+    
+    //initiating clock
+    auto start_time = std::chrono::steady_clock::now();
+
+    cv_bridge::CvImageConstPtr cv_ptr;
+    try
+    {
+        cv_ptr = cv_bridge::toCvShare(msg);
+
     }
-	
-	ros::Rate rate(10);
-	t_pub.publish(t_msg);
-	rate.sleep();
-	
-    // Copy the ros image message to cv::Mat.
-	cv_bridge::CvImageConstPtr cv_ptr;
-	try
-	{
-		cv_ptr = cv_bridge::toCvShare(msg);
-	}
-	catch (cv_bridge::Exception& e)
-	{
-		ROS_ERROR("cv_bridge exception: %s", e.what());
-		return;
-	}
+    catch (cv_bridge::Exception& e)
+    {
+        ROS_ERROR("cv_bridge exception: %s", e.what());
+        return;
+    }
 
-	mpSLAM->TrackMonocular(cv_ptr->image,cv_ptr->header.stamp.toSec());
-	auto end_time = std::chrono::steady_clock::now();
-  	double process_time = std::chrono::duration_cast<std::chrono::duration<double> >(end_time - start_time).count();
-	std::cout << "Processing time per frame: " << process_time << "s\n";
-  	time_track[val_count]= process_time;
-	val_count++;
-  	cout << "Frames used to relocalize after tracking loss: " << loss_count << endl;
-	
+    // ROS_INFO("processing time: ");
+    mpSLAM->TrackMonocular(cv_ptr->image,cv_ptr->header.stamp.toSec());
+    
+    //getting metric value from ORBSLAM system after image is passed to the system for processing
+    track_metric.data = ORB_SLAM3::matches_metric; 
+    cout << "Matches metric: " << ORB_SLAM3::matches_metric << endl; 
+    metric_pub.publish(track_metric); //publishing metric value to buffer node
+
+    //ending clock
+    auto end_time = std::chrono::steady_clock::now();
+    //calculating difference between start and end time
+    double process_time = std::chrono::duration_cast<std::chrono::duration<double> >(end_time - start_time).count();
+    std::cout << "Processing time per frame: " << process_time << "s\n";
+    time_track[val_count]= process_time;  //appending processing time to time_track vector
+    val_count++;  //incrementing pointer inside time_track vector to store new value
 }
-
-
