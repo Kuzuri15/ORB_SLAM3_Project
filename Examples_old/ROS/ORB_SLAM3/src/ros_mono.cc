@@ -113,8 +113,8 @@ void ImageGrabber::GrabImage(const sensor_msgs::ImageConstPtr& msg)
     mpSLAM->TrackMonocular(cv_ptr->image,cv_ptr->header.stamp.toSec());
     
     //getting metric value from ORBSLAM system after image is passed to the system for processing
-    track_metric.data = ORB_SLAM3::matches_metric; 
-    cout << "Matches metric: " << ORB_SLAM3::matches_metric << endl; 
+    track_metric.data = mpSLAM->GetmpTracker()->GetMatchesInliers();
+    cout << "Matches metric: " << track_metric.data << endl; 
     metric_pub.publish(track_metric); //publishing metric value to buffer node
 
     //ending clock
