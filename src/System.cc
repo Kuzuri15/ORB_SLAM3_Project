@@ -1382,6 +1382,12 @@ float System::GetImageScale()
 {
     return mpTracker->GetImageScale();
 }
+  
+//newly created
+Tracking* System::GetmpTracker()
+{
+    return mpTracker;
+}
 
 #ifdef REGISTER_TIMES
 void System::InsertRectTime(double& time)
