@@ -185,6 +185,9 @@ public:
     void ChangeDataset();
 
     float GetImageScale();
+    
+    //newly created
+    Tracking *GetmpTracker();
 
 #ifdef REGISTER_TIMES
     void InsertRectTime(double& time);
