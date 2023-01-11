@@ -125,7 +125,6 @@ def trackMetricCallback(callback_val):
         last_frame_pointer = len(BUFFER_IMAGES) - 1
     if last_frame_pointer < 0:  #boundary condition
         last_frame_pointer = 0
-    if last_frame_pointer >= len(BUFFER_IMAGES): last_frame_pointer = len(BUFFER_IMAGES)-1
 
 
 def calculateStep(tracking_metric, prev_step):
