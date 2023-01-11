@@ -3,13 +3,14 @@ import rospy
 import rosbag
 from std_msgs.msg import String, Int32, Float32, Bool
 from sensor_msgs.msg import Image
+# from buffer import MAX_VELOCITY, LEAST_VELOCITY
 
 current_frame = 0
-frames_skipped = 0
+velocity = 0
 published_messages = 0
 prev_img = None
 IMG_PUB = rospy.Publisher('/camera/images', Image, queue_size=1)
-IMG_PUB_RATE = rospy.Duration(0.7)
+IMG_PUB_RATE = rospy.Duration(0.2)
 img_pub_timer = None
 
 SHUTDOWN_PUB = rospy.Publisher('/shutdown', Bool, queue_size=1)
@@ -26,15 +27,14 @@ bag_pos = 0
 
 def velCallback(callback_value):
 
-    rospy.loginfo("Velocity received\n")
+    # rospy.loginfo("Velocity received\n")
     print ('Received velocity: ', callback_value.data)
-    global frames_skipped, velocity
+    global velocity, frames_skipped
     
     velocity = int(round(callback_value.data))
     print('Integer velocity: ', velocity)
 
     #before publishing the image, updating the number  of frames to be skipped before publishing
-    frames_skipped = frames_skipped + velocity
 
 
 def shutdownROS():
@@ -45,13 +45,12 @@ def shutdownROS():
 
 def publish_image(event=None):
 
-    global prev_img, bag_pos, IMG_PUB, current_frame, published_messages, frames_skipped, BAG_READ, IMAGES_SIZE, SHUTDOWN_PUB
+    global prev_img, bag_pos, IMG_PUB, current_frame, published_messages, frames_skipped, BAG_READ, IMAGES_SIZE, SHUTDOWN_PUB, velocity
     
     #boundary condition to be checked before publishing the image
-    if current_frame + frames_skipped < IMAGES_SIZE:
+    current_frame = current_frame + velocity
+    if current_frame < IMAGES_SIZE:
         image = prev_img
-        current_frame = current_frame + frames_skipped
-        frames_skipped = 0
         # moving bag position to current frame ID for publishing
         while bag_pos <= current_frame:
             image = next(BAG_READ)
@@ -62,6 +61,7 @@ def publish_image(event=None):
         print("Frame being published: ", current_frame)
         published_messages += 1
         print('Published messages till now: ', published_messages)
+        print('--------------------------------')
     else:
         #shutting down if all images from bag file are published
         SHUTDOWN_PUB.publish(True)
@@ -80,4 +80,4 @@ if __name__ == '__main__':
     try:
         mainf()
     except rospy.ROSInterruptException:
-        pass
+        rospy.logwarn("There is something wrong with the program!")
