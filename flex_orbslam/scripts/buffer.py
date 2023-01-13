@@ -86,7 +86,6 @@ def trackMetricCallback(callback_val):
         "timestamp": datetime.now().strftime("%m/%d/%Y, %H:%M:%S")
     })
 
-
     if tracking_metric == -1:
         backTraversal()
         print("State value: ", tracking_metric)
@@ -144,7 +143,6 @@ def calculateVelocity(BUFFER_IMAGES, DEFAULT_VEL):
     print("Slowing Coefficient:", SLOWING_COEFF)
     #updating the velocity as per the state of buffer
     velocity = max(0, min(DEFAULT_VEL, DEFAULT_VEL - SLOWING_COEFF*(len(BUFFER_IMAGES) - BUFFER_ALLOWANCE)))
-    
     return velocity
 
 def publish_image(event=None):
