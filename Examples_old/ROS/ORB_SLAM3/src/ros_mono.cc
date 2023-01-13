@@ -32,6 +32,7 @@
 using namespace std;
 ros::Publisher metric_pub;     //initialized publisher to publish metric value
 std_msgs::Int32 track_metric;  //to store metric value which is published to Buffer node from here
+std_msgs::Int32 state;
 vector<float> time_track;      //keeps track of processing time for each frame
 int val_count = 0;
 
@@ -114,9 +115,18 @@ void ImageGrabber::GrabImage(const sensor_msgs::ImageConstPtr& msg)
     
     //getting metric value from ORBSLAM system after image is passed to the system for processing
     track_metric.data = mpSLAM->GetmpTracker()->GetMatchesInliers();
-    cout << "Matches metric: " << track_metric.data << endl; 
-    metric_pub.publish(track_metric); //publishing metric value to buffer node
-
+    cout << "Matches metric: " << track_metric.data << endl;
+    //getting mState
+    state.data = mpSLAM->GetmpTracker()->mState;
+    cout << "mstate value: " << state.data << endl;
+    
+    if (state.data == 4){
+        state.data = -1;
+        metric_pub.publish(state); //publishing metric value to buffer node
+    }
+    else{
+        metric_pub.publish(track_metric);
+    }
     //ending clock
     auto end_time = std::chrono::steady_clock::now();
     //calculating difference between start and end time
