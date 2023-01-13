@@ -53,9 +53,7 @@ def imageCallback(img):
     global BUFFER_IMAGES, BUFFER_SIZE, imageCount, SLOWING_COEFF, DEFAULT_VEL
     # print("-----------------------")
     # print(img.header.stamp, img.header.seq, img.header.frame_id)
-    # if not BUFFER_LOCK.locked():
-    while BUFFER_LOCK.locked():
-        continue
+ 
     BUFFER_LOCK.acquire()
     BUFFER_IMAGES.append(img)
     if len(BUFFER_IMAGES) > (BUFFER_SIZE-240)//2:  #if buffer goes beyond buffer size, resetting slowing coefficient to half the value before
@@ -78,8 +76,7 @@ def backTraversal():
 def trackMetricCallback(callback_val):
     global track_lost, velocity, step, tracking_metric, TRACK_LOST_THRESHOLD, last_successful_step
     global prev_tracking_metric, BUFFER_IMAGES, BACK_TRAVERSAL, track_flag
-    while BUFFER_LOCK.locked():
-        continue
+    
     BUFFER_LOCK.acquire()
     tracking_metric = callback_val.data
     # state = callback_val.data.mState
@@ -153,8 +150,6 @@ def calculateVelocity(BUFFER_IMAGES, DEFAULT_VEL):
 def publish_image(event=None):
     global IMG_PUB, BUFFER_IMAGES, step, bufferLength_history, publishedImagesHistory
     # print("buffer images, step", len(BUFFER_IMAGES), step)
-    while BUFFER_LOCK.locked():
-        continue
     if BUFFER_IMAGES:
         BUFFER_LOCK.acquire()
         # print("publishing step:", int(round(step)))
