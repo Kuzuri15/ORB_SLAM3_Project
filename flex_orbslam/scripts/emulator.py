@@ -3,7 +3,6 @@ import rospy
 import rosbag
 from std_msgs.msg import String, Int32, Float32, Bool
 from sensor_msgs.msg import Image
-# from buffer import MAX_VELOCITY, LEAST_VELOCITY
 
 current_frame = 0
 velocity = 0
@@ -33,8 +32,6 @@ def velCallback(callback_value):
     
     velocity = int(round(callback_value.data))
     print('Integer velocity: ', velocity)
-
-    #before publishing the image, updating the number  of frames to be skipped before publishing
 
 
 def shutdownROS():
