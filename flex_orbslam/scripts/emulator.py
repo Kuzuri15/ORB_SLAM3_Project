@@ -10,10 +10,10 @@ velocity = 0
 published_messages = 0
 prev_img = None
 IMG_PUB = rospy.Publisher('/camera/images', Image, queue_size=1)
-IMG_PUB_RATE = rospy.Duration(0.2)
+IMG_PUB_RATE = rospy.Duration(0.05)
 img_pub_timer = None
 
-SHUTDOWN_PUB = rospy.Publisher('/shutdown', Bool, queue_size=1)
+# SHUTDOWN_PUB = rospy.Publisher('/shutdown', Bool, queue_size=1)
 
 # Reading bagfile from the path where bagfile is stored
 bag = rosbag.Bag('/home/vivekw964/vivek_ws/src/flex_orbslam/scripts/MH_01_easy.bag')
@@ -21,7 +21,7 @@ BAG_READ = bag.read_messages(topics =['/cam0/image_raw', '/imu', '/position'])
 print("Reading bag file")
 IMAGES_SIZE = sum(1 for _ in BAG_READ)  #getting length size of bagfile (number of image messages present in it)
 print("Number of image messages in ROS bag: ", IMAGES_SIZE)
-#After reading bagfile, pointer is set at the start of bagfile to pint at first image in it
+#After reading bagfile, pointer is set at the start of bagfile to point at first image in it
 BAG_READ = bag.read_messages(topics =['/cam0/image_raw', '/imu', '/position'])
 bag_pos = 0
 
@@ -64,7 +64,7 @@ def publish_image(event=None):
         print('--------------------------------')
     else:
         #shutting down if all images from bag file are published
-        SHUTDOWN_PUB.publish(True)
+        # SHUTDOWN_PUB.publish(True)
         rospy.signal_shutdown("Stopping Publishing")
 
 def mainf():
