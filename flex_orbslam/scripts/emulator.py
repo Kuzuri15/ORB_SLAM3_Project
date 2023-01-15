@@ -3,35 +3,40 @@ import rospy
 import rosbag
 from std_msgs.msg import String, Int32, Float32, Bool
 from sensor_msgs.msg import Image
+import json
+from datetime import datetime
 
 current_frame = 0
-velocity = 0
+velocity = 0.0
 published_messages = 0
 prev_img = None
 IMG_PUB = rospy.Publisher('/camera/images', Image, queue_size=1)
 IMG_PUB_RATE = rospy.Duration(0.05)
 img_pub_timer = None
+image_list = []
+publishedImagesHistory = []
+SHUTDOWN_PUB = rospy.Publisher('/shutdown', Bool, queue_size=1)
 
-# SHUTDOWN_PUB = rospy.Publisher('/shutdown', Bool, queue_size=1)
-
+print("Reading bag file")
 # Reading bagfile from the path where bagfile is stored
 bag = rosbag.Bag('/home/vivekw964/vivek_ws/src/flex_orbslam/scripts/MH_01_easy.bag')
-BAG_READ = bag.read_messages(topics =['/cam0/image_raw', '/imu', '/position'])
-print("Reading bag file")
-IMAGES_SIZE = sum(1 for _ in BAG_READ)  #getting length size of bagfile (number of image messages present in it)
-print("Number of image messages in ROS bag: ", IMAGES_SIZE)
+
+BAG_READ = bag.read_messages(topics =['/cam0/image_raw'])
+for topic, msg, time in BAG_READ:
+    image_list.append(msg)
+# IMAGES_SIZE = sum(1 for _ in BAG_READ)  #getting length size of bagfile (number of image messages present in it)
+print("Number of image messages in ROS bag: ", len(image_list))
 #After reading bagfile, pointer is set at the start of bagfile to point at first image in it
-BAG_READ = bag.read_messages(topics =['/cam0/image_raw', '/imu', '/position'])
-bag_pos = 0
+# BAG_READ = bag.read_messages(topics =['/cam0/image_raw', '/imu', '/position'])
+bag_pos = 0.0
 
 def velCallback(callback_value):
 
     # rospy.loginfo("Velocity received\n")
     print ('Received velocity: ', callback_value.data)
-    global velocity, frames_skipped
+    global velocity
     
-    velocity = int(round(callback_value.data))
-    print('Integer velocity: ', velocity)
+    velocity = (callback_value.data)
 
 
 def shutdownROS():
@@ -42,19 +47,24 @@ def shutdownROS():
 
 def publish_image(event=None):
 
-    global prev_img, bag_pos, IMG_PUB, current_frame, published_messages, frames_skipped, BAG_READ, IMAGES_SIZE, SHUTDOWN_PUB, velocity
+    global prev_img, bag_pos, IMG_PUB, current_frame, published_messages, frames_skipped, BAG_READ, IMAGES_SIZE, SHUTDOWN_PUB, velocity, image_list
     
     #boundary condition to be checked before publishing the image
-    current_frame = current_frame + velocity
-    if current_frame < IMAGES_SIZE:
-        image = prev_img
-        # moving bag position to current frame ID for publishing
-        while bag_pos <= current_frame:
-            image = next(BAG_READ)
-            bag_pos += 1
-        prev_img = image
+    bag_pos = bag_pos + velocity
+    current_frame = int(bag_pos)
+    if current_frame < len(image_list):
 
-        IMG_PUB.publish(image[1])
+        current_time = rospy.Time.now()
+        pub_frame_time = datetime.fromtimestamp(current_time.secs).strftime("%m/%d/%Y, %H:%M:%S")+"."+str(current_time.nsecs)  
+
+        image_list[current_frame].header.stamp = current_time
+
+        IMG_PUB.publish(image_list[current_frame])
+
+        publishedImagesHistory.append({
+            "frameID": int(image_list[current_frame].header.seq),
+            "timestamp": pub_frame_time
+        })
         print("Frame being published: ", current_frame)
         published_messages += 1
         print('Published messages till now: ', published_messages)
@@ -64,6 +74,15 @@ def publish_image(event=None):
         # SHUTDOWN_PUB.publish(True)
         rospy.signal_shutdown("Stopping Publishing")
 
+
+def save_values():
+    global publishedImagesHistory
+    # datetime.strptime(x["timestamp"].split(".")[0], "%m/%d/%Y, %H:%M:%S"), x["timestamp"].split(".")[1]
+    publishedImagesHistory = sorted(publishedImagesHistory, key = lambda x:(datetime.strptime(x["timestamp"].split(".")[0], "%m/%d/%Y, %H:%M:%S"), int(x["timestamp"].split(".")[1])))
+    with open('/home/vivekw964/vivek_ws/src/flex_orbslam/logs/imageHistoryEmulator.json', 'wb') as myfile:
+        myfile.seek(0)
+        json.dump(publishedImagesHistory, myfile, indent=4, sort_keys = True)
+
 def mainf():
     global IMG_PUB_RATE, img_pub_timer
     print("Waiting for velocity...\n")
@@ -71,6 +90,7 @@ def mainf():
     rospy.Subscriber("robot_velocity", Float32, velCallback)
     img_pub_timer = rospy.Timer(IMG_PUB_RATE, publish_image)
     rospy.spin()
+    save_values()
     
 
 if __name__ == '__main__':
