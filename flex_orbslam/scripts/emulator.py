@@ -11,7 +11,7 @@ velocity = 0.0
 published_messages = 0
 prev_img = None
 IMG_PUB = rospy.Publisher('/camera/images', Image, queue_size=1)
-IMG_PUB_RATE = rospy.Duration(0.05)
+IMG_PUB_RATE = rospy.Duration(0.029) #35
 img_pub_timer = None
 image_list = []
 publishedImagesHistory = []
@@ -24,30 +24,21 @@ bag = rosbag.Bag('/home/vivekw964/vivek_ws/src/flex_orbslam/scripts/MH_01_easy.b
 BAG_READ = bag.read_messages(topics =['/cam0/image_raw'])
 for topic, msg, time in BAG_READ:
     image_list.append(msg)
-# IMAGES_SIZE = sum(1 for _ in BAG_READ)  #getting length size of bagfile (number of image messages present in it)
 print("Number of image messages in ROS bag: ", len(image_list))
 #After reading bagfile, pointer is set at the start of bagfile to point at first image in it
-# BAG_READ = bag.read_messages(topics =['/cam0/image_raw', '/imu', '/position'])
 bag_pos = 0.0
 
 def velCallback(callback_value):
 
-    # rospy.loginfo("Velocity received\n")
     print ('Received velocity: ', callback_value.data)
     global velocity
     
     velocity = (callback_value.data)
 
 
-def shutdownROS():
-    global img_pub_timer
-    print("Shutting down ROS")
-    img_pub_timer.stop()
-
-
 def publish_image(event=None):
 
-    global prev_img, bag_pos, IMG_PUB, current_frame, published_messages, frames_skipped, BAG_READ, IMAGES_SIZE, SHUTDOWN_PUB, velocity, image_list
+    global bag_pos, IMG_PUB, current_frame, published_messages, BAG_READ, SHUTDOWN_PUB, velocity, image_list
     
     #boundary condition to be checked before publishing the image
     bag_pos = bag_pos + velocity
@@ -70,14 +61,11 @@ def publish_image(event=None):
         print('Published messages till now: ', published_messages)
         print('--------------------------------')
     else:
-        #shutting down if all images from bag file are published
-        # SHUTDOWN_PUB.publish(True)
         rospy.signal_shutdown("Stopping Publishing")
 
 
 def save_values():
     global publishedImagesHistory
-    # datetime.strptime(x["timestamp"].split(".")[0], "%m/%d/%Y, %H:%M:%S"), x["timestamp"].split(".")[1]
     publishedImagesHistory = sorted(publishedImagesHistory, key = lambda x:(datetime.strptime(x["timestamp"].split(".")[0], "%m/%d/%Y, %H:%M:%S"), int(x["timestamp"].split(".")[1])))
     with open('/home/vivekw964/vivek_ws/src/flex_orbslam/logs/imageHistoryEmulator.json', 'wb') as myfile:
         myfile.seek(0)
